@@ -1,0 +1,66 @@
+diff --git a/ggml/src/ggml-cpu/arch/x86/quants.c b/ggml/src/ggml-cpu/arch/x86/quants.c
+index 21cd631..68c6feb 100644
+--- a/ggml/src/ggml-cpu/arch/x86/quants.c
++++ b/ggml/src/ggml-cpu/arch/x86/quants.c
+@@ -1819,6 +1819,61 @@ void ggml_vec_dot_q2_K_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const voi
+ 
+     *s = hsum_float_8(acc);
+ 
++#elif defined(__SSSE3__)
++
++    const __m128i m3 = _mm_set1_epi8(0x03);
++    const __m128i m15 = _mm_set1_epi8(0x0f);
++    const __m128i zero = _mm_setzero_si128();
++    const int groups_per_half = QK_K / 32;
++    const int q2_bytes_per_half = QK_K / 8;
++    float sumf = 0.0f;
++
++    for (int i = 0; i < nb; ++i) {
++        const float dall = y[i].d * GGML_CPU_FP16_TO_FP32(x[i].d);
++        const float dmin = y[i].d * GGML_CPU_FP16_TO_FP32(x[i].dmin);
++        __m128i sumi = _mm_setzero_si128();
++        const __m128i scales = _mm_loadu_si128((const __m128i *) x[i].scales);
++        const __m128i mins = _mm_and_si128(_mm_srli_epi16(scales, 4), m15);
++        const __m128i summs_lo = _mm_madd_epi16(
++            _mm_unpacklo_epi8(mins, zero),
++            _mm_loadu_si128((const __m128i *) &y[i].bsums[0]));
++        const __m128i summs_hi = _mm_madd_epi16(
++            _mm_unpackhi_epi8(mins, zero),
++            _mm_loadu_si128((const __m128i *) &y[i].bsums[8]));
++        const __m128i summs_pairs = _mm_add_epi32(summs_lo, summs_hi);
++        const __m128i summs_halves = _mm_add_epi32(
++            summs_pairs, _mm_shuffle_epi32(summs_pairs, _MM_SHUFFLE(1, 0, 3, 2)));
++        const __m128i summs_total = _mm_add_epi32(
++            summs_halves, _mm_shuffle_epi32(summs_halves, _MM_SHUFFLE(2, 3, 0, 1)));
++        const int summs = _mm_cvtsi128_si32(summs_total);
++
++        for (int half = 0; half < QK_K / 128; ++half) {
++            for (int lane = 0; lane < 2; ++lane) {
++                const int q2_offset = half * q2_bytes_per_half + lane * 16;
++                const __m128i q2bits = _mm_loadu_si128((const __m128i *) (x[i].qs + q2_offset));
++
++                for (int plane = 0; plane < 4; ++plane) {
++                    const int group = plane * 2 + lane;
++                    const int j = half * groups_per_half + group;
++                    const __m128i q2 = _mm_and_si128(_mm_srl_epi16(q2bits, _mm_cvtsi32_si128(plane * 2)), m3);
++                    const __m128i q8 = _mm_loadu_si128((const __m128i *) (y[i].qs + j * 16));
++                    const __m128i products = _mm_maddubs_epi16(q2, q8);
++                    const int scale = x[i].scales[j] & 0x0f;
++
++                    sumi = _mm_add_epi32(sumi, _mm_madd_epi16(_mm_set1_epi16((short) scale), products));
++                }
++            }
++        }
++
++        const __m128i sum_pairs = _mm_add_epi32(sumi, _mm_shuffle_epi32(sumi, _MM_SHUFFLE(1, 0, 3, 2)));
++        const __m128i sum_total = _mm_add_epi32(sum_pairs, _mm_shuffle_epi32(sum_pairs, _MM_SHUFFLE(2, 3, 0, 1)));
++        const int isum = _mm_cvtsi128_si32(sum_total);
++
++        sumf += dall * isum - dmin * summs;
++    }
++
++    *s = sumf;
++
+ #else
+     UNUSED(x);
+     UNUSED(y);

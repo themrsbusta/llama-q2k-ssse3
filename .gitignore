@@ -1,0 +1,9 @@
+# Local builds, model files, and credentials must stay out of this artifact repo.
+/build*/
+/llama.cpp/
+/models/
+*.gguf
+.env
+.env.*
+*.pem
+*.key

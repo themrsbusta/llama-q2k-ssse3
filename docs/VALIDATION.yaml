@@ -1,0 +1,98 @@
+format: "panthera-q2k-ssse3-validation/v1"
+package:
+  target_repository: "themrsbusta/llama-q2k-ssse3"
+  visibility: "public"
+  release_state: "validated and prepared"
+  upstream_modified: false
+  organization_created: false
+  branch: "main"
+authorship:
+  organization: "Panthera Softwares"
+  implementation: "Argos Codex (AI-assisted)"
+  responsible: "Busta Supastar"
+  attribution_disclosed: true
+license:
+  package: "MIT"
+  upstream: "MIT"
+  upstream_notice: "LICENSE-llama.cpp"
+patch:
+  file: "patches/llama-n4100-q2-review.patch"
+  sha256: "69a37b2dad7457ab8b9b7f527488c2f402ce71eb6147deda16515396bdd5f280"
+  upstream_base: "5676dfbe01e7ebe0387913680eee0ed39bf4a363"
+  compatibility_apply_check: "31953bcf74ba489a8bbb0c936c5fcf24fcf9485c"
+  changed_file: "ggml/src/ggml-cpu/arch/x86/quants.c"
+  function: "ggml_vec_dot_q2_K_q8_K"
+  added_lines: 55
+  apply_check: "pass"
+  diff_check: "pass"
+  isa_gate: "__SSSE3__"
+tests:
+  command: "test-backend-ops -b CPU -o MUL_MAT -p 'type_a=q2_K' -j 3"
+  result: "55/55 passed"
+  tested_commit: "5676dfbe01e7ebe0387913680eee0ed39bf4a363"
+  log: "tests/test-backend-ops.log"
+  ggml_bmi2: false
+benchmark:
+  executable: "llama.cpp llama-bench"
+  build_commit: "5676dfbe01e7ebe0387913680eee0ed39bf4a363"
+  kernel: "7.0.0-43-generic"
+  accepted_runs_same_boot: true
+  cpu: "Intel Celeron N4100, 4 cores, 4 threads"
+  cpu_supports_bmi2: false
+  model_file: "gemma-4-e2b-Q2_K.gguf"
+  model_size_bytes_reported_by_llama_bench: 2973268108
+  model_parameters: 4647450147
+  model_sha256: "dce13bfe3684ed92bce8a60b60d87a840869dd54ba76c08144ba760c506cde00"
+  backend: "CPU"
+  threads: 3
+  prompt_tokens: 128
+  generated_tokens: 32
+  repetitions: 3
+  batch: 2048
+  ubatch: 512
+  gpu_layers: 0
+  cmake_flags:
+    build_type: "Release"
+    ggml_native: false
+    ggml_bmi2: false
+    ggml_sse42: true
+    ggml_avx: false
+    ggml_avx2: false
+    ggml_fma: false
+    ggml_f16c: false
+    ggml_openmp: true
+    ggml_blas: false
+    ggml_cuda: false
+    ggml_vulkan: false
+  temperature_c_observed_range: "70-75"
+  temperature_log: "benchmarks/temperature.csv"
+  background_load_note: "Yoosee remained active; other background load was not controlled."
+  baseline:
+    raw_file: "benchmarks/upstream.json"
+    library_sha256: "6efc390f9e50c8ab0e7ff39a078c17f76c87485abf7c4edcea52f2cec2c5a08a"
+    prompt_tok_s:
+      mean: 2.238986
+      sd: 0.002929
+      samples: [2.23654, 2.23819, 2.24223]
+    generation_tok_s:
+      mean: 0.576651
+      sd: 0.005388
+      samples: [0.580522, 0.570497, 0.578932]
+  ssse3_patch:
+    raw_file: "benchmarks/ssse3.json"
+    library_sha256: "310e04aefe0337b1b4927747ca95d9f5c29f23ecf24de4bc3b880f4438da753a"
+    prompt_tok_s:
+      mean: 6.413858
+      sd: 0.012860
+      samples: [6.42755, 6.40204, 6.41198]
+    generation_tok_s:
+      mean: 1.390631
+      sd: 0.006469
+      samples: [1.3954, 1.39323, 1.38327]
+  ratios:
+    prompt: 2.864626
+    generation: 2.411564
+  temperature_safety_note: "Initial baseline build with BMI2 enabled exited with SIGILL; disabled BMI2 and rebuilt both variants before the accepted A/B."
+  superseded_run:
+    raw_file: "benchmarks/archived/ssse3-before-reboot-superseded.json"
+    excluded_reason: "It ran on the prior kernel boot and is not part of the same-boot A/B summary."
