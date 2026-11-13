@@ -2,7 +2,9 @@ format: "panthera-q2k-ssse3-validation/v1"
 package:
   target_repository: "themrsbusta/llama-q2k-ssse3"
   visibility: "public"
-  release_state: "validated and prepared"
+  release_state: "published"
+  repository_url: "https://github.com/themrsbusta/llama-q2k-ssse3"
+  initial_publication_commit: "9eecf1fb82f1d0e60203d1279e0abb92e7324c8b"
   upstream_modified: false
   organization_created: false
   branch: "main"
