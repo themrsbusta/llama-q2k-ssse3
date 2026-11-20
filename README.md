@@ -1,5 +1,8 @@
 # llama.cpp Q2_K SSSE3 Optimization
 
+**Division:** Panthera Research. **License:** [MIT](LICENSE).
+
+
 An independent Panthera Softwares patch for the `ggml_vec_dot_q2_K_q8_K` CPU kernel in [`ggml-org/llama.cpp`](https://github.com/ggml-org/llama.cpp). This package contains the patch and validation artifacts, not a llama.cpp source tree or model weights. It is not an official llama.cpp release.
 
 ## Recorded A/B results
